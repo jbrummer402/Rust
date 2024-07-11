@@ -1,6 +1,6 @@
 pub mod components;
 
-use rusty_chess::game::{self, Game};
+use rusty_chess::game::{self};
 use std::fmt::Error;
 
 const WIDTH: i32 = 960;

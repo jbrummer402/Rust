@@ -1,9 +1,0 @@
-/home/l4ntern/Code/LanguagesPractice/Rust/rusty_chess/target/debug/build/raylib-sys-baed3aced828ba3e/out/lib/libraylib.a
-/home/l4ntern/Code/LanguagesPractice/Rust/rusty_chess/target/debug/build/raylib-sys-baed3aced828ba3e/out/include/raylib.h
-/home/l4ntern/Code/LanguagesPractice/Rust/rusty_chess/target/debug/build/raylib-sys-baed3aced828ba3e/out/include/rlgl.h
-/home/l4ntern/Code/LanguagesPractice/Rust/rusty_chess/target/debug/build/raylib-sys-baed3aced828ba3e/out/include/physac.h
-/home/l4ntern/Code/LanguagesPractice/Rust/rusty_chess/target/debug/build/raylib-sys-baed3aced828ba3e/out/include/raymath.h
-/home/l4ntern/Code/LanguagesPractice/Rust/rusty_chess/target/debug/build/raylib-sys-baed3aced828ba3e/out/include/raudio.h
-/home/l4ntern/Code/LanguagesPractice/Rust/rusty_chess/target/debug/build/raylib-sys-baed3aced828ba3e/out/lib/pkgconfig/raylib.pc
-/home/l4ntern/Code/LanguagesPractice/Rust/rusty_chess/target/debug/build/raylib-sys-baed3aced828ba3e/out/lib/cmake/raylib/raylib-config-version.cmake
-/home/l4ntern/Code/LanguagesPractice/Rust/rusty_chess/target/debug/build/raylib-sys-baed3aced828ba3e/out/lib/cmake/raylib/raylib-config.cmake
