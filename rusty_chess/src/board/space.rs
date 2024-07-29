@@ -9,7 +9,6 @@ pub struct Space {
 }
 
 impl Space {
-
     pub fn default() -> Space {
         Space {
             rect: Rectangle {
@@ -36,5 +35,4 @@ impl Space {
             is_occupied,
         }
     }
-
 }

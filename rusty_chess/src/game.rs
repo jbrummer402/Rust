@@ -1,100 +1,25 @@
+use crate::board::space::Space;
 use crate::board::piece::{Piece, PieceType};
-use crate::board::piece::MovementVector;
-use crate::board::space::{Space};
-use glob::glob;
 use raylib::consts::MouseButton::*;
 use raylib::prelude::*;
-use std::collections::HashMap;
 use std::fmt::{Error};
+use std::ops::Neg;
+use std::collections::HashMap;
 use std::{panic, u8};
-
-fn string_to_piece_name(s: &str) -> Result<PieceType, Error> {
-    match s {
-        "pawn" | "Pawn" => Ok(PieceType::Pawn),
-        "rook" | "Rook" => Ok(PieceType::Rook),
-        "bishop" | "Bishop" => Ok(PieceType::Bishop),
-        "knight" | "Knight" => Ok(PieceType::Knight),
-        "king" | "King" => Ok(PieceType::King),
-        "queen" | "Queen" => Ok(PieceType::Queen),
-        _ => panic!("Piece not found! Zoinks!"),
-    }
-}
 
 pub struct Game {
     pub turn: bool,
     pub layout: [[Space; 8]; 8],
     // Map the names of pieces to the number of them left
-    piece_textures: HashMap<PieceType, Vec<Texture2D>>,
+    pub state: u8,
+    offset: Vector2,
+    dragging_piece: Option<Piece>,
+    dragging: bool,
+    mouse_coords: (usize, usize)
 }
 
 impl Game {
-    fn draw_straight(arg: Type) { 
 
-    }
-
-    fn draw_diagonal(&self, space: &Space, d: &mut RaylibDrawHandle, delta: (i8,i8), coords: (usize, usize)) -> bool {
-        
-        d.draw_rectangle(
-            (60 * (space.rect.x / 60.0 + delta.0 as f32) as i8).into(),
-            (60 * (space.rect.y / 60.0 + delta.1 as f32) as i8).into(),
-            60,
-            60,
-            color::Color::new(255,0,0,150)
-        );
-
-        let next_space = self.layout[coords.0][coords.1];
-
-        match self.layout[(space.rect.x as i8 + delta.0) as usize][(space.rect.y as i8 + delta.1) as usize].piece {
-            Some(p) => false,
-            None => self.draw_diagonal(&next_space, d, delta, (coords.0 + delta.0 as usize, coords.1 + delta.1 as usize))
-        };
-        
-        false 
-    }
-
-    fn draw_valid_moves(&self, p: &Piece, d: &mut RaylibDrawHandle) {
-        // Represent movement of pieces as vectors
-        // eg: Pawn -> (0, +-1)
-        // Bishop -> (+-X, +-Y)
-        // etc etc
-        let move_vector: MovementVector = match p.piece_type {
-            PieceType::King => MovementVector {x_range: [-1,1], y_range:[-1,1], fixed: true, diagonal: true}, 
-            PieceType::Queen => MovementVector {x_range: [-1,1], y_range:[-1,1], fixed: false, diagonal: true},
-            PieceType::Bishop => MovementVector {x_range: [-1,1], y_range:[-1,1], fixed: false, diagonal: true},
-            PieceType::Knight => MovementVector {x_range: [-1,1], y_range:[-1,1], fixed: true, diagonal: false},
-            PieceType::Rook => MovementVector {x_range: [-1,1], y_range:[-1,1], fixed: false, diagonal: false},
-            PieceType::Pawn => MovementVector {x_range: [0,0], y_range:[-1,1], fixed: true, diagonal: true},
-        };
-
-        let mut free_to_move = true; 
-        let mut dx = 0;
-        let mut dy = 0;
-
-        if move_vector.diagonal {
-            while free_to_move {
-                // North east
-                self.draw_diagonal(&self.layout[][], d, (1,1), (usize, usize)));
-
-                // Northwest
-                self.draw_diagonal(&self.layout[][], d, (-1,1), (usize, usize)));
-
-                // Southeast
-                self.draw_diagonal(&self.layout[][], d, (1,-1), (usize, usize)));
-
-                // Southwest
-                free_to_move = self.draw_diagonal(&self.layout[][], d, (-1,-1), (usize, usize)));
-            }
-        } else {
-                d.draw_rectangle(
-                    (60).into(),
-                    (60).into(),
-                    60,
-                    60,
-                    color::Color::new(255,0,0,150)
-                );
-            }
-        
-    }
     fn get_piece_at(&self, mouse_position: Vector2) -> Option<Piece> {
         let row = (mouse_position.x / 60.0).floor();
         let col = (mouse_position.y / 60.0).floor();
@@ -130,7 +55,7 @@ impl Game {
         }
     }
 
-    fn draw_pieces(&mut self, d: &mut RaylibDrawHandle) {
+    fn draw_pieces(&mut self, d: &mut RaylibDrawHandle, textures: &HashMap<PieceType, Vec<Texture2D>>) {
         for row in 0..self.layout.len() {
             for col in 0..self.layout[row].len() {
                 let identity = match self.layout[row][col].piece {
@@ -138,8 +63,8 @@ impl Game {
                     None => continue,
                 };
 
-                let p_text = &self
-                    .piece_textures
+                let p_text = 
+                    &textures
                     .get(&self.layout[row][col].piece.unwrap().piece_type)
                     .unwrap()[identity as usize];
 
@@ -161,99 +86,57 @@ impl Game {
         }
     }
 
-    pub fn run(&mut self, rl: &mut RaylibHandle, thread: RaylibThread) -> Result<(), Error> {
-        // Load all the textures for each piece first
-        let _ = self.load_pieces_textures(rl, thread.clone());
-        let mut dragging = false;
-        let mut offset = Vector2::default();
+    pub fn run(&mut self, d: &mut RaylibDrawHandle, thread: RaylibThread, textures: &HashMap<PieceType, Vec<Texture2D>>) -> Result<(), Error> {
+        d.clear_background(Color::WHITE);
+        self.draw_board(d);
+        if d.is_mouse_button_pressed(MOUSE_LEFT_BUTTON) {
+            self.mouse_coords = Game::to_board_cooridinates(d.get_mouse_position());
 
-        let mut dragging_piece: Option<Piece> = None;
-        let mut mouse_coords = Game::to_board_cooridinates(rl.get_mouse_position());
-
-        while !(rl.window_should_close()) {
-            if rl.is_mouse_button_pressed(MOUSE_LEFT_BUTTON) {
-                mouse_coords = Game::to_board_cooridinates(rl.get_mouse_position());
-
-                dragging_piece = match self.get_piece_at(rl.get_mouse_position()) {
-                    Some(p) => {
-                        dragging = true;
-                        offset.x = rl.get_mouse_x() as f32
-                            - self.layout[mouse_coords.0][mouse_coords.1].rect.x;
-                        offset.y = rl.get_mouse_y() as f32
-                            - self.layout[mouse_coords.0][mouse_coords.1].rect.y;
-                        Some(p)
-                    },
-                    None => { 
-                        None
-                    } 
-                };
-            } else if rl.is_mouse_button_released(MOUSE_LEFT_BUTTON) {
-                dragging = false;
-                self.layout[mouse_coords.0][mouse_coords.1].rect.x = dragging_piece.unwrap().rect.x;
-                self.layout[mouse_coords.0][mouse_coords.1].rect.y = dragging_piece.unwrap().rect.y;
+            self.dragging_piece = match self.get_piece_at(d.get_mouse_position()) {
+                Some(p) => {
+                    self.dragging = true;
+                    self.offset.x = d.get_mouse_x() as f32 - self.layout[self.mouse_coords.0][self.mouse_coords.1].rect.x;
+                    self.offset.y = d.get_mouse_y() as f32 - self.layout[self.mouse_coords.0][self.mouse_coords.1].rect.y;
+                    Some(p)
+                },
+                None => { 
+                    None
+                } 
+            };
+        } else if d.is_mouse_button_released(MOUSE_LEFT_BUTTON) {
+            self.dragging = false;
+            match self.dragging_piece {
+                Some(value) => {
+                    self.layout[self.mouse_coords.0][self.mouse_coords.1].rect.x = value.rect.x;
+                    self.layout[self.mouse_coords.0][self.mouse_coords.1].rect.y = value.rect.y;
+                },
+                None => {
+                    println!("no piece there")
+                } 
             }
-            if dragging {
-                self.layout[mouse_coords.0][mouse_coords.1].rect.x =
-                    rl.get_mouse_x() as f32 - offset.x;
-                self.layout[mouse_coords.0][mouse_coords.1].rect.y =
-                    rl.get_mouse_y() as f32 - offset.y;
-
-            }             // Begin drawing the textures after loading
-            let d: &mut RaylibDrawHandle<'_> = &mut rl.begin_drawing(&thread);
-            // clear background each frame
-            d.clear_background(Color::WHITE);
-            if dragging_piece.is_some() {
-                self.draw_valid_moves(&dragging_piece.unwrap(), d);
-                
-            }
-            self.draw_board(d);
-            self.draw_pieces(d);
+            self.dragging_piece = None;
         }
+
+        if self.dragging {
+            self.layout[self.mouse_coords.0][self.mouse_coords.1].rect.x = d.get_mouse_x() as f32 - self.offset.x;
+            self.layout[self.mouse_coords.0][self.mouse_coords.1].rect.y = d.get_mouse_y() as f32 - self.offset.y;
+        }             
+
+        if self.dragging_piece.is_some() {
+            match self.dragging_piece.unwrap().piece_type {
+               PieceType::Bishop => {
+                self.dragging_piece.expect("WHY ISN'T THERE A PIECE HERE").draw_diagonal(&self, d, (self.mouse_coords.0 as i8, self.mouse_coords.1 as i8));
+               } 
+               _ => {
+                self.dragging_piece.expect("WHY ISN'T THERE A PIECE HERE").draw_straight(&self, d, (self.mouse_coords.0 as i8, self.mouse_coords.1 as i8));
+               }
+            }
+        }
+
+        self.draw_pieces(d, textures);
         Ok(())
     }
-    fn piece_index(str: &String) -> (Result<usize, Error>, u8) {
-        if str.contains("white") {
-            (Ok(str.find("white").unwrap()), 1)
-        } else {
-            (Ok(str.find("black").unwrap()), 2)
-        }
-    }
 
-    fn load_pieces_textures(
-        &mut self,
-        rl: &mut RaylibHandle,
-        thread: RaylibThread,
-    ) -> Result<(), Error> {
-        for file in glob("./imgs/pieces-basic-png/*").expect("D.piece_rect.ry not found") {
-            let f = file.unwrap();
-            let texture = rl.load_texture(
-                &thread,
-                f.clone().into_os_string().to_str().expect("failed"),
-            );
-            let t = texture.unwrap();
-
-            let path_substring = &(f.clone().into_os_string().into_string().unwrap());
-
-            let (index, _owner) = Self::piece_index(&String::from(path_substring));
-
-            let name = string_to_piece_name(&path_substring[index? + 6..path_substring.len() - 4]);
-
-            let p_name = &name.unwrap();
-
-            match self.piece_textures.entry(*p_name) {
-                std::collections::hash_map::Entry::Occupied(mut entry) => {
-                    entry.get_mut().push(t);
-                }
-
-                std::collections::hash_map::Entry::Vacant(_entry) => {
-                    let mut texture_vec = Vec::<Texture2D>::new();
-                    texture_vec.push(t);
-                    self.piece_textures.insert(*p_name, texture_vec);
-                }
-            }
-        }
-        Ok(())
-    }
 
     pub fn default() -> Game {
         let mut layout: [[Space; 8]; 8] = [[Space::default(); 8]; 8];
@@ -283,15 +166,18 @@ impl Game {
                 }
 
                 layout[col][row] = space;
+                println!("{:?}", layout[row][col].piece)
             }
         }
 
         Game {
             turn: true,
             layout,
-            piece_textures: HashMap::<PieceType, Vec<Texture2D>>::new(),
-            // Map the names of pieces to the number of them left
-            // per player
+            state: 0,
+            offset: Vector2::default(),
+            dragging_piece: None,
+            dragging: false,
+            mouse_coords: (0, 0)
+        }
         }
     }
-}
