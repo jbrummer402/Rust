@@ -6,6 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+clang = "2.0.0"
+cmake = "0.1.54"
 glob = "0.3.1"
-raylib = "3.7.0"
+raylib = "5.0.2"
 substring = "1.4.5"
