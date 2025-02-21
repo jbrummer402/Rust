@@ -89,7 +89,7 @@ impl Game {
     pub fn run(&mut self, d: &mut RaylibDrawHandle, thread: RaylibThread, textures: &HashMap<PieceType, Vec<Texture2D>>) -> Result<(), Error> {
         d.clear_background(Color::WHITE);
         self.draw_board(d);
-        if d.is_mouse_button_pressed(MOUSE_LEFT_BUTTON) {
+        if d.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) {
             self.mouse_coords = Game::to_board_cooridinates(d.get_mouse_position());
 
             self.dragging_piece = match self.get_piece_at(d.get_mouse_position()) {
@@ -103,7 +103,7 @@ impl Game {
                     None
                 } 
             };
-        } else if d.is_mouse_button_released(MOUSE_LEFT_BUTTON) {
+        } else if d.is_mouse_button_released(MOUSE_BUTTON_LEFT) {
             self.dragging = false;
             match self.dragging_piece {
                 Some(value) => {

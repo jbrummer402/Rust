@@ -24,7 +24,7 @@ pub fn create_menu(d: &mut RaylibDrawHandle, game_state: &mut u8) {
         height: BUTTON_HEIGHT
     };
 
-    if d.is_mouse_button_released(MOUSE_LEFT_BUTTON) {
+    if d.is_mouse_button_released(MOUSE_BUTTON_LEFT) {
         unsafe {
         if CheckCollisionPointRec(d.get_mouse_position().into(), new_game_rect.into()) {
             *game_state = 1;
